@@ -6,6 +6,7 @@ import './App.css'
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const NAVER_CLIENT_ID = import.meta.env.VITE_NAVER_CLIENT_ID;
 const NAVER_CALLBACK_URL = import.meta.env.VITE_NAVER_CALLBACK_URL;
+const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
 
 // 로그인 상태 저장/불러오기 함수
 const saveLoginState = (provider, userData) => {
@@ -50,6 +51,39 @@ function handleNaverLogin() {
   });
 }
 
+function handleKakaoLogin() {
+  if (window.Kakao) {
+    window.Kakao.Auth.login({
+      success: function (authObj) {
+        console.log(authObj);
+        window.Kakao.API.request({
+          url: '/v2/user/me',
+          success: function (res) {
+            console.log('Kakao User:', res);
+            const { id, kakao_account } = res;
+            const userData = {
+              id,
+              email: kakao_account.email,
+              nickname: kakao_account.profile.nickname,
+            };
+            saveLoginState('kakao', userData);
+            alert('카카오 로그인 성공! ' + userData.email);
+            window.location.reload();
+          },
+          fail: function (error) {
+            console.error(error);
+            alert('카카오 사용자 정보 요청 실패');
+          },
+        });
+      },
+      fail: function (err) {
+        console.error(err);
+        alert('카카오 로그인 실패');
+      },
+    });
+  }
+}
+
 
 function App() {
   const [count, setCount] = useState(0);
@@ -92,9 +126,21 @@ function App() {
     document.body.appendChild(googleScript);
     document.body.appendChild(naverScript);
 
+    // 카카오 로그인 스크립트 동적 로드
+    const kakaoScript = document.createElement('script');
+    kakaoScript.src = 'https://developers.kakao.com/sdk/js/kakao.js';
+    kakaoScript.async = true;
+    kakaoScript.onload = () => {
+      if (window.Kakao && !window.Kakao.isInitialized()) {
+        window.Kakao.init(KAKAO_CLIENT_ID);
+      }
+    };
+    document.body.appendChild(kakaoScript);
+
     return () => {
       document.body.removeChild(googleScript);
       document.body.removeChild(naverScript);
+      document.body.removeChild(kakaoScript);
     };
   }, []);
 
@@ -130,6 +176,13 @@ function App() {
         <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', margin: '20px 0' }}>
           <div id="google-login-btn"></div>
           <div id="naverIdLogin"></div>
+          <img
+            src="https://th.bing.com/th/id/R.64ee737be0e6a38c1e397111fe727a65?rik=kJ21Mzu2pCmW3w&riu=http%3a%2f%2fpluspng.com%2fimg-png%2fkakao-logo-png-file-kakao-ci-yellow-svg-1280.png&ehk=7qRmwhZbDk9Snp2kkV35uWbaYx%2bDv1a8HqTfDaCOfn4%3d&risl=&pid=ImgRaw&r=0"
+            width="222"
+            alt="카카오 로그인"
+            onClick={handleKakaoLogin}
+            style={{ cursor: 'pointer' }}
+          />
         </div>
       )}
       <div className="card">
